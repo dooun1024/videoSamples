@@ -1,0 +1,40 @@
+<meta charset="utf-8">
+<video id="myVideo" style="width:500px;" controls>
+  <source src="testVideo.mp4"  type="video/mp4">
+  <track kind="subtitles" src="sub_ja.vtt" srclang="ja" label="日本語">
+  <track kind="subtitles" src="sub_en.vtt" srclang="en" label="English">
+  <track kind="subtitles" src="sub_zh.vtt" srclang="zh" label="中文">
+</video>
+
+<script>
+const video = document.getElementById("myVideo");
+const textTracks = video.textTracks;
+
+// 页面加载时恢复用户上次选择
+const lastLang = localStorage.getItem("subtitleLang");
+video.addEventListener("loadedmetadata", () => {
+  if (lastLang === "off") {
+    for (let i = 0; i < textTracks.length; i++) {
+      textTracks[i].mode = "disabled";
+    }
+  } else if (lastLang) {
+    for (let i = 0; i < textTracks.length; i++) {
+      textTracks[i].mode = (textTracks[i].language === lastLang) ? "showing" : "disabled";
+    }
+  }
+});
+
+// 监听字幕切换（包括关闭）
+textTracks.addEventListener("change", () => {
+  let showing = null;
+  for (let i = 0; i < textTracks.length; i++) {
+    const track = textTracks[i];
+    if ((track.kind === "subtitles" || track.kind === "captions") && track.mode === "showing") {
+      showing = track.language;
+    }
+  }
+  const value = showing ? showing : "off";
+  localStorage.setItem("subtitleLang", value);
+  console.log("subtitleLang:", value);
+});
+</script>
