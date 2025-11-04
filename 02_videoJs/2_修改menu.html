@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Video.js 8 Custom Subtitle Menu</title>
+
+  <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet">
+  <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
+
+  <style>
+    /* 自定义按钮图标 */
+    .vjs-subtitle-advanced-button .vjs-icon-placeholder:before {
+      content: "⚙";
+      font-size: 16px;
+    }
+
+    /* 字幕设置面板 */
+    .vjs-subtitle-settings-panel {
+      position: fixed;
+      top: 25%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 260px;
+      padding: 16px;
+      background: #222;
+      color: #fff;
+      border-radius: 8px;
+      z-index: 9999;
+      font-family: sans-serif;
+    }
+    .vjs-subtitle-settings-panel button {
+      margin-top: 12px;
+      background: #00aaff;
+      border: none;
+      padding: 6px 12px;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<video
+  id="my-video"
+  class="video-js vjs-default-skin"
+  width="800" height="450"
+  controls
+>
+  <source src="testVideo.mp4" type="video/mp4">
+  <track src="sub_ja.vtt" kind="subtitles" srclang="ja" label="日本語" default>
+</video>
+
+<script>
+  const MenuButton = videojs.getComponent('MenuButton');
+  const Menu = videojs.getComponent('Menu');
+  const MenuItem = videojs.getComponent('MenuItem');
+
+  class SubtitleAdvancedMenuButton extends MenuButton {
+    constructor(player, options) {
+      super(player, options);
+      this.addClass('vjs-subtitle-advanced-button');
+      this.controlText('字幕高级设置');
+    }
+
+    createMenu() {
+      const menu = new Menu(this.player());
+      const positions = [
+        { label: '顶部显示', value: 'top' },
+        { label: '中间显示', value: 'middle' },
+        { label: '底部显示', value: 'bottom' }
+      ];
+
+      positions.forEach(pos => {
+        const item = new MenuItem(this.player(), { label: pos.label });
+        item.on('click', () => {
+          this.player().trigger('subtitle-position-change', pos.value);
+        });
+        menu.addChild(item);
+      });
+
+      return menu;
+    }
+  }
+
+  videojs.registerComponent('SubtitleAdvancedMenuButton', SubtitleAdvancedMenuButton);
+
+  const player = videojs('my-video', {
+    controlBar: {
+      children: [
+        'playToggle',
+        'volumePanel',
+        'currentTimeDisplay',
+        'progressControl',
+        'durationDisplay',
+        'SubtitlesButton',
+        'SubtitleAdvancedMenuButton',
+        'fullscreenToggle'
+      ]
+    }
+  });
+
+  // 弹出字幕设置面板
+  player.on('subtitle-position-change', (e, pos) => {
+    const panel = document.createElement('div');
+    panel.className = 'vjs-subtitle-settings-panel';
+    panel.innerHTML = `
+      <h3>字幕位置设置</h3>
+      <p>选择：${pos}</p>
+      <button id="apply">应用</button>
+    `;
+    document.body.appendChild(panel);
+
+    panel.querySelector('#apply').onclick = () => {
+      const trackDisplay = player.el().querySelector('.vjs-text-track-display');
+
+      if (pos === 'top') trackDisplay.style.bottom = '85%';
+      else if (pos === 'middle') trackDisplay.style.bottom = '45%';
+      else trackDisplay.style.bottom = '5%';
+
+      document.body.removeChild(panel);
+    };
+  });
+</script>
+
+</body>
+</html>
