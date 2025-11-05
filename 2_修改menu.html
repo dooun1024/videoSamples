@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <title>Video.js 8 Custom Subtitle Menu</title>
+
+  <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet">
+  <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
+
+
+  <style>
+    /* 自定义按钮图标 */
+    .vjs-subtitle-advanced-button .vjs-icon-placeholder:before {
+      content: "⚙";
+      font-size: 16px;
+    }
+
+    /* 字幕设置面板 */
+    .vjs-subtitle-settings-panel {
+      position: fixed;
+      top: 25%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 500px;
+      padding: 16px;
+      background: #222;
+      color: #fff;
+      border-radius: 8px;
+      z-index: 9999;
+      font-family: sans-serif;
+    }
+
+    .vjs-subtitle-settings-panel button {
+      margin-top: 12px;
+      background: #00aaff;
+      border: none;
+      padding: 6px 12px;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+  </style>
+
+  <style>
+    #subtitle-settings-panel {
+      position: absolute;
+      bottom: 65px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.85);
+      color: white;
+      padding: 15px;
+      border-radius: 6px;
+      display: none;
+      z-index: 9999;
+      width: 240px;
+    }
+
+    #subtitle-settings-panel label {
+      display: block;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <video id="my-video" class="video-js vjs-default-skin" width="800" height="450" controls>
+    <source src="testVideo.mp4" type="video/mp4">
+    <track src="sub_ja.vtt" kind="subtitles" srclang="ja" label="日本語" default>
+  </video>
+
+  <script>
+    const MenuButton = videojs.getComponent('MenuButton');
+    const Menu = videojs.getComponent('Menu');
+    const MenuItem = videojs.getComponent('MenuItem');
+
+    class SubtitleAdvancedMenuButton extends MenuButton {
+      constructor(player, options) {
+        super(player, options);
+        this.addClass('vjs-subtitle-advanced-button');
+        this.controlText('字幕高级设置');
+      }
+
+      createMenu() {
+        const menu = new Menu(this.player());
+        const positions = [
+          { label: '字幕設定', value: 'subtitleSetting' },
+          { label: '字幕オフ', value: 'subtitleOff' },
+          { label: '日本語字幕', value: 'jpSubtitle' },
+        ];
+
+        positions.forEach(pos => {
+          const item = new MenuItem(this.player(), { label: pos.label });
+          item.on('click', () => {
+            this.player().trigger('subtitle-position-change', pos.value);
+          });
+          menu.addChild(item);
+        });
+
+        return menu;
+      }
+    }
+
+    videojs.registerComponent('SubtitleAdvancedMenuButton', SubtitleAdvancedMenuButton);
+
+    const player = videojs('my-video', {
+      controlBar: {
+        children: [
+          'playToggle',
+          'volumePanel',
+          'currentTimeDisplay',
+          'progressControl',
+          'durationDisplay',
+          'SubtitlesButton',
+          'SubtitleAdvancedMenuButton',
+          'fullscreenToggle'
+        ]
+      }
+    });
+
+
+
+    // 弹出字幕设置面板
+    player.on('subtitle-position-change', (e, pos) => {
+      const tracks = player.textTracks();
+
+      // 切换字幕
+      if (value === 'jpSubtitle') {
+        for (let i = 0; i < tracks.length; i++) {
+          tracks[i].mode = tracks[i].language === "ja" ? "showing" : "disabled";
+        }
+        return; // ✅ 不再弹出设置面板
+      }
+
+      // 字幕关闭
+      if (value === 'subtitleOff') {
+        for (let i = 0; i < tracks.length; i++) {
+          tracks[i].mode = "disabled";
+        }
+        return; // ✅ 不弹面板
+      }
+
+      // 打开字幕设置面板（你的原代码）
+      if (value === 'subtitleSetting') {
+        const panel = document.createElement('div');
+        panel.className = 'vjs-subtitle-settings-panel';
+        let panelHtml = `
+      <h2 style="text-align:center;"><strong>字幕设定</strong></h2>
+
+      <label>文字色:
+        <input type="color" id="subtitleColor" value="#ffffff">
+      </label>
+      <br>
+
+      <label>背景透明度:
+        <input type="range" id="subtitleBg" min="0" max="1" step="0.1" value="0.5">
+      </label>
+      <br>
+
+      <label>文字サイズ:
+        <input type="range" id="subtitleSize" min="80" max="200" value="100"> %
+      </label>
+      <br>
+
+      <label>字幕位置:
+        <select id="subtitlePosition" style="width:150px;">
+          <option value="bottom">下</option>
+          <option value="top">上</option>
+        </select>
+      </label>
+      <br>
+
+      <button id="apply">応用</button>
+      <button id="closeSettings">閉じる</button>
+    `;
+        panel.innerHTML = panelHtml;
+        document.body.appendChild(panel);
+
+        // panel.querySelector('#apply').onclick = () => document.body.removeChild(panel);
+        // panel.querySelector('#closeSettings').onclick = () => document.body.removeChild(panel);
+      }
+      // 応用
+      panel.querySelector('#apply').onclick = () => {
+        const trackDisplay = player.el().querySelector('.vjs-text-track-display');
+
+        if (pos === 'top') trackDisplay.style.bottom = '85%';
+        else if (pos === 'middle') trackDisplay.style.bottom = '45%';
+        else trackDisplay.style.bottom = '5%';
+
+        document.body.removeChild(panel);
+      };
+
+      //閉じる
+      panel.querySelector('#closeSettings').onclick = () => {
+        const trackDisplay = player.el().querySelector('.vjs-text-track-display');
+
+        if (pos === 'top') trackDisplay.style.bottom = '85%';
+        else if (pos === 'middle') trackDisplay.style.bottom = '45%';
+        else trackDisplay.style.bottom = '5%';
+
+        document.body.removeChild(panel);
+      };
+    });
+  </script>
+
+</body>
+
+</html>
